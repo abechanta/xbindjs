@@ -1,0 +1,22 @@
+<html>
+	<head>
+		<script src="https://unpkg.com/jquery"></script>
+		<!-- <script src="https://unpkg.com/xbindjs"></script> -->
+		<script src="../../index.js"></script>
+	</head>
+	<body>
+		<h1>Your links</h1>
+		<ul>
+			<li><a xb-bind-on="link.url.0" xb-affect-to="href">First</a></li>
+			<li><a xb-bind-on="link.url.1" xb-affect-to="href">Second</a></li>
+			<li><a xb-bind-on="link.url.2" xb-affect-to="href">Third</a></li>
+		</ul>
+
+		<script>
+			const boundVars = xbind.build()
+			boundVars.link.url[0] = "https://example.com/first"
+			boundVars.link.url[1] = "https://example.com/second"
+			boundVars.link.url[2] = "https://example.com/third"
+		</script>
+	</body>
+</html>

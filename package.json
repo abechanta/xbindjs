@@ -1,0 +1,23 @@
+{
+  "name": "xbindjs",
+  "version": "0.1.0",
+  "description": "xbind.js is a rugged, minimal frontend helper for manipulating contents on your web page.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abechanta/xbindjs.git"
+  },
+  "keywords": [
+    "frontend",
+    "binding"
+  ],
+  "author": "abechanta",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/abechanta/xbindjs/issues"
+  },
+  "homepage": "https://github.com/abechanta/xbindjs#readme"
+}

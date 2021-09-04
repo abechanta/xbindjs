@@ -1,0 +1,30 @@
+<html>
+	<head>
+		<script src="https://unpkg.com/jquery"></script>
+		<!-- <script src="https://unpkg.com/xbindjs"></script> -->
+		<script src="../../index.js"></script>
+	</head>
+	<body>
+		<h1>Your address</h1>
+		<form>
+			<div>Address 1</div>
+			<input type="text" xb-bind-on="addr.address.0" />
+			<div>Address 2</div>
+			<input type="text" xb-bind-on="addr.address.1" />
+			<div>City</div>
+			<input type="text" xb-bind-on="addr.city" />
+			<div>Country</div>
+			<input type="text" xb-bind-on="addr.country" />
+			<div>Zip</div>
+			<input type="text" xb-bind-on="addr.zipcode" />
+			<div>
+				<button type="button" id="submit">Print</button>
+			</div>
+		</form>
+
+		<script>
+			const boundVars = xbind.build()
+			$("#submit").click(() => console.log(boundVars))
+		</script>
+	</body>
+</html>

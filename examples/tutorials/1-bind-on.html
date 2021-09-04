@@ -1,0 +1,17 @@
+<html>
+	<head>
+		<script src="https://unpkg.com/jquery"></script>
+		<!-- <script src="https://unpkg.com/xbindjs"></script> -->
+		<script src="../../index.js"></script>
+	</head>
+	<body>
+		<h1 xb-bind-on="head.message1"></h1>
+		<div xb-bind-on="head.message2"></div>
+
+		<script>
+			const boundVars = xbind.build()
+			boundVars.head.message1 = "Hello, xbind.js!"
+			boundVars.head.message2 = "You can easily modify elements on your page."
+		</script>
+	</body>
+</html>

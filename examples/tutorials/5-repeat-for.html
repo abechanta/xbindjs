@@ -1,0 +1,32 @@
+<html>
+	<head>
+		<script src="https://unpkg.com/jquery"></script>
+		<!-- <script src="https://unpkg.com/xbindjs"></script> -->
+		<script src="../../index.js"></script>
+	</head>
+	<body>
+		<h1>Your table</h1>
+		<table>
+			<tr>
+				<th>Year</th>
+				<th>Place</th>
+			</tr>
+			<template xb-pp-repeat-for="$item in items">
+				<tr>
+					<td xb-bind-on="$item.year"></td>
+					<td xb-bind-on="$item.place"></td>
+				</tr>
+			</template>
+		</table>
+
+		<script>
+			const boundVars = xbind.build({
+				items: [
+					{ year: 2016, place: "Rio de Janeiro", },
+					{ year: 2021, place: "Tokyo", },
+					{ year: 2024, place: "Paris", },
+				],
+			})
+		</script>
+	</body>
+</html>

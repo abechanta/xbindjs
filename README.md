@@ -1,0 +1,149 @@
+# xbind.js - super simple, lightweight & friendly
+
+**xbind.js** is a rugged, minimal frontend helper for manipulating contents on your web page.
+
+## No virtual DOM, non reactive, not MVVM..., this is good old style but reasonable
+
+Include a single script, markup your page, then ready for manipulating with your frontend scripts. Think of it like jQuery for the modern web. It’s super simple so you can introduce **xbind.js** within few minutes.
+
+## Binding
+
+```html
+<html>
+	<head>
+		<script src="https://unpkg.com/xbindjs"></script>
+	</head>
+	<body>
+		<h1 xb-bind-on="head.message1"></h1>
+		<div xb-bind-on="head.message2"></div>
+
+		<script>
+			const boundVars = xbind.build()
+			boundVars.head.message1 = "Hello, xbind.js!"
+			boundVars.head.message2 = "You can easily modify elements on your page."
+		</script>
+	</body>
+</html>
+```
+
+This code tells you what **xbind.js** will bring to you. With a `xb-bind-on` keyword, you can modify inner texts of DOM elements by assigning strings to bound variables.
+
+```html
+<html>
+	<head>
+		<script src="https://unpkg.com/xbindjs"></script>
+		<script src="https://unpkg.com/jquery"></script>
+	</head>
+	<body>
+		<h1>Your address</h1>
+		<form>
+			<div>Address 1</div>
+			<input type="text" xb-bind-on="addr.address.0" />
+			<div>Address 2</div>
+			<input type="text" xb-bind-on="addr.address.1" />
+			<div>City</div>
+			<input type="text" xb-bind-on="addr.city" />
+			<div>Country</div>
+			<input type="text" xb-bind-on="addr.country" />
+			<div>Zip</div>
+			<input type="text" xb-bind-on="addr.zipcode" />
+			<hr />
+			<button type="button" id="submit">Print</button>
+		</form>
+
+		<script>
+			const boundVars = xbind.build()
+			$("#submit").click(() => console.log(boundVars))
+		</script>
+	</body>
+</html>
+```
+
+You can also get values or texts from your input elements as well. These bound variables are bound bi-directionally, so that you can retrieve input values easily.
+
+```html
+<html>
+	<head>
+		<script src="https://unpkg.com/xbindjs"></script>
+	</head>
+	<body>
+		<h1>Your links</h1>
+		<ul>
+			<li><a xb-bind-on="link.url.0" xb-affect-to="href">First</a></li>
+			<li><a xb-bind-on="link.url.1" xb-affect-to="href">Second</a></li>
+			<li><a xb-bind-on="link.url.2" xb-affect-to="href">Third</a></li>
+		</ul>
+
+		<script>
+			const boundVars = xbind.build()
+			boundVars.link.url[0] = "https://example.com/first"
+			boundVars.link.url[1] = "https://example.com/second"
+			boundVars.link.url[2] = "https://example.com/third"
+		</script>
+	</body>
+</html>
+```
+
+With a `xb-affect-to` keyword, you can modify properties of elements as well.
+
+## Preprocess
+
+```html
+<html>
+	<head>
+		<script src="https://unpkg.com/xbindjs"></script>
+	</head>
+	<body>
+		<h1>Your section</h1>
+		<template xb-pp-present-if="firstTime">
+			<div>Welcome to xbind.js!</div>
+		</template>
+		<template xb-pp-present-if="not firstTime">
+			<div>Welcome back!</div>
+		</template>
+
+		<script>
+			const boundVars = xbind.build({
+				firstTime: true,
+			})
+		</script>
+	</body>
+</html>
+```
+
+With a `xb-pp-present-if` keyword of `template` tag, you can add a block of DOM elements from script.
+
+```html
+<html>
+	<head>
+		<script src="https://unpkg.com/xbindjs"></script>
+	</head>
+	<body>
+		<h1>Your table</h1>
+		<table>
+			<tr>
+				<th>Year</th>
+				<th>Place</th>
+			</tr>
+			<template xb-pp-repeat-for="$item in items">
+				<tr>
+					<td xb-bind-on="$item.year"></td>
+					<td xb-bind-on="$item.place"></td>
+				</tr>
+			</template>
+		</table>
+
+		<script>
+			const boundVars = xbind.build({
+				items: [
+					{ year: 2016, place: "Rio de Janeiro", },
+					{ year: 2021, place: "Tokyo", },
+					{ year: 2024, place: "Paris", },
+				],
+			})
+		</script>
+	</body>
+</html>
+```
+
+With a `xb-pp-repeat-for` keyword of `template` tag, you can duplicate a block of DOM elements as you need.

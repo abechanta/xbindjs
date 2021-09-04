@@ -1,0 +1,22 @@
+<html>
+	<head>
+		<script src="https://unpkg.com/jquery"></script>
+		<!-- <script src="https://unpkg.com/xbindjs"></script> -->
+		<script src="../../index.js"></script>
+	</head>
+	<body>
+		<h1>Your section</h1>
+		<template xb-pp-present-if="firstTime">
+			<div>Welcome to xbind.js!</div>
+		</template>
+		<template xb-pp-present-if="not firstTime">
+			<div>Welcome back!</div>
+		</template>
+
+		<script>
+			const boundVars = xbind.build({
+				firstTime: true,
+			})
+		</script>
+	</body>
+</html>
