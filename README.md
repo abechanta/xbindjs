@@ -1,10 +1,10 @@
 # xbind.js - super simple, lightweight & friendly
 
-xbind is a rugged, minimal frontend helper for manipulating contents on your web page.
+**xbind.js** is a rugged, minimal frontend helper for manipulating contents on your web page.
 
 ## No virtual DOM, non reactive, not MVVM..., this is good old style but reasonable
 
-Include a single script, markup your page, then ready for manipulating with your frontend scripts. Think of it like jQuery for the modern web. It’s super simple so you can introduce xbind within few minutes.
+Include a single script, markup your page, then ready for manipulating with your frontend scripts. Think of it like jQuery for the modern web. It’s super simple so you can introduce **xbind.js** within few minutes.
 
 ## Binding
 
@@ -19,14 +19,14 @@ Include a single script, markup your page, then ready for manipulating with your
 
 		<script>
 			const boundVars = xbind.build()
-			boundVars.head.message1 = "Hello, xbind!"
+			boundVars.head.message1 = "Hello, xbind.js!"
 			boundVars.head.message2 = "You can easily modify elements on your page."
 		</script>
 	</body>
 </html>
 ```
 
-This code tells you what xbind will bring to you. With a `xb-bind-on` keyword, you can modify inner texts of DOM elements by assigning strings to bound variables.
+This code tells you what **xbind.js** will bring to you. With a `xb-bind-on` keyword, you can modify inner texts of DOM elements by assigning strings to bound variables.
 
 ```html
 <html>
@@ -96,7 +96,7 @@ With a `xb-affect-to` keyword, you can modify properties of elements as well.
 	<body>
 		<h1>Your section</h1>
 		<template xb-pp-present-if="firstTime">
-			<div>Welcome to xbind!</div>
+			<div>Welcome to xbind.js!</div>
 		</template>
 		<template xb-pp-present-if="not firstTime">
 			<div>Welcome back!</div>
