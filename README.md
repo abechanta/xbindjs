@@ -86,7 +86,7 @@ You can also get values or texts from your input elements as well. These bound v
 
 With a `xb-affect-to` keyword, you can modify properties of elements as well.
 
-## Preprocess
+## Cloning with template
 
 ```html
 <html>
@@ -125,7 +125,7 @@ With a `xb-pp-present-if` keyword of `template` tag, you can add a block of DOM 
 				<th>Year</th>
 				<th>Place</th>
 			</tr>
-			<template xb-pp-repeat-for="$item in items">
+			<template xb-repeat-for="$item in items">
 				<tr>
 					<td xb-bind-on="$item.year"></td>
 					<td xb-bind-on="$item.place"></td>
@@ -134,16 +134,18 @@ With a `xb-pp-present-if` keyword of `template` tag, you can add a block of DOM 
 		</table>
 
 		<script>
-			const boundVars = xbind.build({
-				items: [
-					{ year: 2016, place: "Rio de Janeiro", },
-					{ year: 2021, place: "Tokyo", },
-					{ year: 2024, place: "Paris", },
-				],
-			})
+			const boundVars = xbind.build()
+			boundVars.items.push(
+				{ year: 2016, place: "Rio de Janeiro", },
+			)
+			boundVars.items.push(
+				{ year: 2020, place: "Tokyo", },
+				{ year: 2024, place: "Paris", },
+			)
+			boundVars.items[1].year = 2021
 		</script>
 	</body>
 </html>
 ```
 
-With a `xb-pp-repeat-for` keyword of `template` tag, you can duplicate a block of DOM elements as you need.
+With a `xb-repeat-for` keyword of `template` tag, you can duplicate a block of DOM elements as you need.
