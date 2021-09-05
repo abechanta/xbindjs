@@ -11,7 +11,7 @@
 				<th>Year</th>
 				<th>Place</th>
 			</tr>
-			<template xb-pp-repeat-for="$item in items">
+			<template xb-repeat-for="$item in items">
 				<tr>
 					<td xb-bind-on="$item.year"></td>
 					<td xb-bind-on="$item.place"></td>
@@ -20,13 +20,15 @@
 		</table>
 
 		<script>
-			const boundVars = xbind.build({
-				items: [
-					{ year: 2016, place: "Rio de Janeiro", },
-					{ year: 2021, place: "Tokyo", },
-					{ year: 2024, place: "Paris", },
-				],
-			})
+			const boundVars = xbind.build()
+			boundVars.items.push(
+				{ year: 2016, place: "Rio de Janeiro", },
+			)
+			boundVars.items.push(
+				{ year: 2020, place: "Tokyo", },
+				{ year: 2024, place: "Paris", },
+			)
+			boundVars.items[1].year = 2021
 		</script>
 	</body>
 </html>
