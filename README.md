@@ -95,23 +95,22 @@ With a `xb-affect-to` keyword, you can modify properties of elements as well.
 	</head>
 	<body>
 		<h1>Your section</h1>
-		<template xb-pp-present-if="firstTime">
+		<template xb-present-if="firstTime">
 			<div>Welcome to xbind.js!</div>
 		</template>
-		<template xb-pp-present-if="not firstTime">
+		<template xb-present-if="not firstTime2">
 			<div>Welcome back!</div>
 		</template>
 
 		<script>
-			const boundVars = xbind.build({
-				firstTime: true,
-			})
+			const boundVars = xbind.build()
+			boundVars.firstTime = true
 		</script>
 	</body>
 </html>
 ```
 
-With a `xb-pp-present-if` keyword of `template` tag, you can add a block of DOM elements from script.
+With a `xb-present-if` keyword along with `template` tag, you can add a block of DOM elements from script.
 
 ```html
 <html>
@@ -148,4 +147,4 @@ With a `xb-pp-present-if` keyword of `template` tag, you can add a block of DOM 
 </html>
 ```
 
-With a `xb-repeat-for` keyword of `template` tag, you can duplicate a block of DOM elements as you need.
+With a `xb-repeat-for` keyword along with `template` tag, you can duplicate a block of DOM elements as you need.
