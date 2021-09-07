@@ -1,9 +1,69 @@
 "use strict"
 
-const parse_not_x = /\s*(not\s+)?(\$?[.\w]+)\s*/
-const parse_x_in_y = /\s*(\$\w+)\s+in\s+(\$?[.\w]+)\s*/
+class xbindParser {
+
+	static _digObj(target, reference) {
+		const refs = reference.split(".")
+		return {
+			key: refs.pop(),
+			obj: refs.reduce((obj, key) => obj[key] = obj[key] || {}, target),
+		}
+	}
+
+	static _resolveReference(aliases, reference) {
+		const [ refTop, ] = reference.split(".")
+		if (refTop.startsWith("$") && aliases.hasOwnProperty(refTop)) {
+			return [ aliases[refTop], reference.replace(`${refTop}.`, ""), ]
+		}
+		return [ aliases[undefined], reference, ]
+	}
+
+	static syntax = {
+		"x": (element, attr, aliases) => {
+			const pattern = /\s*(\$?[.\w]+)\s*/
+			const expression = $(element).attr(attr)
+			const matches = expression?.match(pattern)
+			if (!matches) {
+				return undefined
+			}
+			return {
+				reference: matches[1],	// x
+				target: xbindParser._digObj(...xbindParser._resolveReference(aliases, matches[1])),
+			}
+		},
+
+		"not_x": (element, attr, aliases) => {
+			const pattern = /\s*(not\s+)?(\$?[.\w]+)\s*/
+			const expression = $(element).attr(attr)
+			const matches = expression?.match(pattern)
+			if (!matches) {
+				return undefined
+			}
+			return {
+				reference: matches[2],		// x
+				inversion: !!matches[1],	// not?
+				target: xbindParser._digObj(...xbindParser._resolveReference(aliases, matches[2])),
+			}
+		},
+
+		"x_in_y": (element, attr, aliases) => {
+			const pattern = /\s*(\$\w+)\s+in\s+(\$?[.\w]+)\s*/
+			const expression = $(element).attr(attr)
+			const matches = expression?.match(pattern)
+			if (!matches) {
+				return undefined
+			}
+			return {
+				reference: matches[2],	// y
+				iterator: matches[1],	// x
+				target: xbindParser._digObj(...xbindParser._resolveReference(aliases, matches[2])),
+			}
+		},
+	}
+}
 
 class xbindArray {
+
 	constructor(onpush) {
 		this.onpush = onpush
 		Object.defineProperty(this, "contents", {
@@ -14,8 +74,8 @@ class xbindArray {
 		})
 	}
 
-	push(...appendVarsList) {
-		for (let appendVars of appendVarsList) {
+	push(...objs) {
+		for (let obj of objs) {
 			const boundVars = {}
 			const idx = this.contents.length
 			this.contents.push(boundVars)
@@ -25,7 +85,7 @@ class xbindArray {
 				set: val => this.contents[idx] = val,
 			})
 			this.onpush(boundVars)
-			xbind._assignObj(boundVars, appendVars)
+			xbind._assignObj(boundVars, obj)
 		}
 	}
 
@@ -39,24 +99,15 @@ class xbindArray {
 }
 
 class xbind {
-	static _digObj(targetObj, refVar) {
-		const refKeys = refVar.split(".")
-		return [ refKeys.pop(), refKeys.reduce((obj, name) => obj[name] = obj[name] || {}, targetObj), ]
-	}
 
-	static _digValue(targetObj, refVar) {
-		const refKeys = refVar.split(".")
-		return refKeys.reduce((obj, name) => obj.hasOwnProperty(name) ? obj[name] : [], targetObj || {})
-	}
-
-	static _assignObj(dstObj, srcObj) {
-		for (let entry in srcObj) {
-			if (typeof(srcObj[entry]) === "object") {
-				if (typeof(dstObj[entry]) === "object") {
-					xbind._assignObj(dstObj[entry], srcObj[entry])
+	static _assignObj(dst, src) {
+		for (let key in src) {
+			if (typeof(src[key]) === "object") {
+				if (typeof(dst[key]) === "object") {
+					xbind._assignObj(dst[key], src[key])
 				}
 			} else {
-				dstObj[entry] = srcObj[entry]
+				dst[key] = src[key]
 			}
 		}
 	}
@@ -96,15 +147,11 @@ class xbind {
 		},
 	]
 
-	static templateHandlers = {
+	static cloners = {
 		"xb-present-if": {
-			parse: element => {
-				const expression = $(element).attr("xb-present-if")
-				const matches = expression?.match(parse_not_x)
-				return matches ? [ matches[2], !!matches[1], ] : [ undefined, true, ]
-			},
-			setterWrapper: (targetObj, key, task) => () => {
-				Object.defineProperty(targetObj, key, {
+			parse: (element, aliases) => xbindParser.syntax["not_x"](element, "xb-present-if", aliases),
+			setter: (obj, key, task) => () => {
+				Object.defineProperty(obj, key, {
 					enumerable: !key.startsWith("_"),
 					// configurable: true,
 					set: task,
@@ -113,88 +160,73 @@ class xbind {
 		},
 
 		"xb-repeat-for": {
-			parse: element => {
-				const expression = $(element).attr("xb-repeat-for")
-				const matches = expression?.match(parse_x_in_y)
-				return matches ? [ matches[2], matches[1], ] : [ undefined, [] ]
-			},
-			setterWrapper: (targetObj, key, task) => () => {
-				targetObj[key] = new xbindArray(task)
+			parse: (element, aliases) => xbindParser.syntax["x_in_y"](element, "xb-repeat-for", aliases),
+			setter: (obj, key, task) => () => {
+				obj[key] = new xbindArray(task)
 			},
 		},
 	}
 
 	static bind(boundVars, normalizers) {
-		function resolveReference(aliasVars, refVar) {
-			const [ refKeyTop, ] = refVar.split(".")
-			if (refKeyTop.startsWith("$") && aliasVars.hasOwnProperty(refKeyTop)) {
-				return [ aliasVars[refKeyTop], refVar.replace(`${refKeyTop}.`, ""), ]
-			}
-			return [ aliasVars[undefined], refVar, ]
-		}
 
-		function bindVars(aliasVars, normalizers) {
+		function bindVars(aliases, normalizers) {
 			return (i, element) => {
 				// parse directive attr
-				const refVar = $(element).attr("xb-bind-on")
-				const [ lastKey, parentObj, ] = xbind._digObj(...resolveReference(aliasVars, refVar))
+				const dataB = xbindParser.syntax["x"](element, "xb-bind-on", aliases)
 				const binder = xbind.binders.find(binder => binder.is(element))
-				const normalizer = normalizers[lastKey] || (val => val)
+				const normalizer = normalizers[dataB.target.key] || (val => val)
 
 				// register getter/setter
-				Object.defineProperty(parentObj, lastKey, {
-					enumerable: !lastKey.startsWith("_"),
+				Object.defineProperty(dataB.target.obj, dataB.target.key, {
+					enumerable: !dataB.target.key.startsWith("_"),
 					// configurable: true,
 					...binder.binder(element, normalizer),
 				})
 
 				// register onchange handler for input element
-				if (normalizers[lastKey]) {
+				if (normalizers[dataB.target.key]) {
 					$(element).change(() => {
-						parentObj[lastKey] = parentObj[lastKey].trim()
+						dataB.target.obj[dataB.target.key] = dataB.target.obj[dataB.target.key].trim()
 					})
 				}
 			}
 		}
 
-		function cloneBlock(fragment, aliasVars, aliasVar) {
-			const allDirectives = Object.keys(xbind.templateHandlers).map(str => `[${str}]`).join(",")
-			const aliasVarsNext = Object.assign({}, aliasVars, aliasVar)
-			$("[xb-bind-on]", fragment).each(bindVars(aliasVarsNext, normalizers))
-			$(allDirectives, fragment).each(parseBlocks(aliasVarsNext))
-			return fragment
-		}
-
-		function parseBlocks(aliasVars) {
+		function parseBlocks(aliases) {
 			return (i, element) => {
 				// parse directive attr
-				const [ refVarI, inversion, ] = xbind.templateHandlers["xb-present-if"].parse(element)
-				const [ lastKeyI, parentObjI, ] = refVarI ? xbind._digObj(...resolveReference(aliasVars, refVarI)) : []
-				const [ refVarR, aliasVar, ] = xbind.templateHandlers["xb-repeat-for"].parse(element)
-				const [ lastKeyR, parentObjR, ] = refVarR ? xbind._digObj(...resolveReference(aliasVars, refVarR)) : []
-
+				const dataI = xbind.cloners["xb-present-if"].parse(element, aliases)
+				const dataR = xbind.cloners["xb-repeat-for"].parse(element, aliases)
 				const clonerI = () => {
-					const clone = cloneBlock(element.content.cloneNode(true), aliasVars, {})
+					const clone = cloneBlock(element.content.cloneNode(true), aliases, {})
 					element.parentNode.insertBefore(clone, element)
 				}
 				const clonerR = boundVars => {
-					const clone = cloneBlock(element.content.cloneNode(true), aliasVars, { [aliasVar]: boundVars, })
+					const clone = cloneBlock(element.content.cloneNode(true), aliases, { [dataR.iterator]: boundVars, })
 					element.parentNode.insertBefore(clone, element)
 				}
 
-				if (refVarI) {
-					const task = refVarR ? xbind.templateHandlers["xb-repeat-for"].setterWrapper(parentObjR, lastKeyR, clonerR) : clonerI
-					const taskWrapper = inversion ? val => !val && task() : val => val && task()
+				if (dataI) {
+					const task = dataR ? xbind.cloners["xb-repeat-for"].setter(dataR.target.obj, daraR.target.key, clonerR) : clonerI
+					const taskWrapper = dataI.inversion ? val => !val && task() : val => val && task()
 
 					// register getter/setter
-					const setterWrapperI = xbind.templateHandlers["xb-present-if"].setterWrapper(parentObjI, lastKeyI, taskWrapper)
-					setterWrapperI()
+					const setterWrapper = xbind.cloners["xb-present-if"].setter(dataI.target.obj, dataI.target.key, taskWrapper)
+					setterWrapper()
 				} else {
 					// register onpush handler for adding element
-					const setterWrapperR = xbind.templateHandlers["xb-repeat-for"].setterWrapper(parentObjR, lastKeyR, clonerR)
-					setterWrapperR()
+					const setterWrapper = xbind.cloners["xb-repeat-for"].setter(dataR.target.obj, dataR.target.key, clonerR)
+					setterWrapper()
 				}
 			}
+		}
+
+		function cloneBlock(fragment, aliases, alias) {
+			const directives = Object.keys(xbind.cloners).map(str => `[${str}]`).join(",")
+			const aliasesNext = Object.assign({}, aliases, alias)
+			$("[xb-bind-on]", fragment).each(bindVars(aliasesNext, normalizers))
+			$(directives, fragment).each(parseBlocks(aliasesNext))
+			return fragment
 		}
 
 		cloneBlock(document, {}, { undefined: boundVars, })
