@@ -124,79 +124,6 @@ class xbind {
 		},
 	}
 
-	static preprocessors = {
-		"xb-pp-present-if": {
-			parse: (targetObj, element) => {
-				const expression = $(element).attr("xb-pp-present-if")
-				if (!expression) {
-					return [ undefined, true, ]
-				}
-				const inversion = expression.startsWith("not ")
-				const refVar = inversion ? expression.replace("not ", "") : expression
-				return [ refVar, inversion === !xbind._digValue(targetObj, refVar), ]
-			},
-		},
-		"xb-pp-repeat-for": {
-			parse: (targetObj, element) => {
-				const expression = $(element).attr("xb-pp-repeat-for")
-				if (!expression) {
-					return [ undefined, [] ]
-				}
-				const [ aliasVar, refVar, ] = expression.split(" in ").map(str => str.trim())
-				return [ refVar, xbind._digValue(targetObj, refVar)?.map((e, i) => {
-					return { [aliasVar]: `${refVar}.${i}`, }
-				}) || [], ]
-			},
-		},
-	}
-
-	static preprocess(paramVars) {
-		function cloneBlock(element, aliasVars, refVars) {
-			const clone = element.content.cloneNode(true)
-
-			// mark as cloned
-			refVars.forEach(refVar => {
-				$(clone).children().attr("xb-pp-cloned", refVar)
-			})
-
-			// replace alias name (the first segment of bind-on varName) into referenced name
-			$("[xb-bind-on]", clone).each((i, element) => {
-				const refVar = $(element).attr("xb-bind-on")
-				const [ refKeyTop, ] = refVar.split(".")
-				if (refKeyTop.startsWith("$") && aliasVars.hasOwnProperty(refKeyTop)) {
-					$(element).attr("xb-bind-on", refVar.replace(refKeyTop, aliasVars[refKeyTop]))
-				}
-			})
-
-			return clone
-		}
-
-		function cloneBlocks(paramVars, aliasVars) {
-			return (i, element) => {
-				// parse directive attr
-				const [ refVarI, condition, ] = xbind.preprocessors["xb-pp-present-if"].parse(paramVars, element)
-				const [ refVarR, aliasVarList, ] = xbind.preprocessors["xb-pp-repeat-for"].parse(paramVars, element)
-
-				if (refVarI && condition && !refVarR) {
-					aliasVarList.push({})
-				}
-
-				// clone template fragments
-				for (let aliasVar of aliasVarList) {
-					const aliasVarsNext = Object.assign({}, aliasVars, aliasVar)
-					const refVars = [ refVarI, refVarR, ].reduce((cur, e) => e ? cur.push(e) && cur : cur, [])
-					const clone = cloneBlock(element, aliasVarsNext, refVars)
-					const allDirectives = Object.keys(xbind.preprocessors).map(str => `[${str}]`).join(",")
-					$(allDirectives, clone).each(cloneBlocks(paramVars, aliasVarsNext))
-					element.parentNode.insertBefore(clone, element)
-				}
-			}
-		}
-
-		const allDirectives = Object.keys(xbind.preprocessors).map(str => `[${str}]`).join(",")
-		$(allDirectives).each(cloneBlocks(paramVars, {}))
-	}
-
 	static bind(boundVars, normalizers) {
 		function resolveReference(aliasVars, refVar) {
 			const [ refKeyTop, ] = refVar.split(".")
@@ -276,13 +203,9 @@ class xbind {
 	static build(params) {
 		const xb = window.xbind || {
 			boundVars: {},
-			paramVars: params || {},
-			normalizers: params?._normalizers || {},
+			normalizers: params?.normalizers || {},
 		}
-		Object.assign(xb.paramVars, params)
-		xbind.preprocess(xb.paramVars)
 		xbind.bind(xb.boundVars, xb.normalizers)
-		xbind._assignObj(xb.boundVars, xb.paramVars)
 		window.xbind = xb
 		return xb.boundVars
 	}
