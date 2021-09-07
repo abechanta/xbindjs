@@ -6,17 +6,16 @@
 	</head>
 	<body>
 		<h1>Your section</h1>
-		<template xb-pp-present-if="firstTime">
+		<template xb-present-if="firstTime">
 			<div>Welcome to xbind.js!</div>
 		</template>
-		<template xb-pp-present-if="not firstTime">
+		<template xb-present-if="not firstTime2">
 			<div>Welcome back!</div>
 		</template>
 
 		<script>
-			const boundVars = xbind.build({
-				firstTime: true,
-			})
+			const boundVars = xbind.build()
+			boundVars.firstTime = true
 		</script>
 	</body>
 </html>

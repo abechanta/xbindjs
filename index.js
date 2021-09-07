@@ -1,24 +1,113 @@
 "use strict"
 
+class xbindParser {
+
+	static _digObj(target, reference) {
+		const refs = reference.split(".")
+		return {
+			key: refs.pop(),
+			obj: refs.reduce((obj, key) => obj[key] = obj[key] || {}, target),
+		}
+	}
+
+	static _resolveReference(aliases, reference) {
+		const [ ref0, ] = reference.split(".")
+		if (ref0.startsWith("$") && aliases.hasOwnProperty(ref0)) {
+			return [ aliases[ref0], reference.replace(`${ref0}.`, ""), ]
+		}
+		return [ aliases[undefined], reference, ]
+	}
+
+	static syntax = {
+		"x": (element, attr, aliases) => {
+			const pattern = /\s*(\$?[.\w]+)\s*/
+			const expression = $(element).attr(attr)
+			const matches = expression?.match(pattern)
+			if (!matches) {
+				return undefined
+			}
+			return {
+				reference: matches[1],	// x
+				target: xbindParser._digObj(...xbindParser._resolveReference(aliases, matches[1])),
+			}
+		},
+
+		"not_x": (element, attr, aliases) => {
+			const pattern = /\s*(not\s+)?(\$?[.\w]+)\s*/
+			const expression = $(element).attr(attr)
+			const matches = expression?.match(pattern)
+			if (!matches) {
+				return undefined
+			}
+			return {
+				reference: matches[2],		// x
+				inversion: !!matches[1],	// not?
+				target: xbindParser._digObj(...xbindParser._resolveReference(aliases, matches[2])),
+			}
+		},
+
+		"x_in_y": (element, attr, aliases) => {
+			const pattern = /\s*(\$\w+)\s+in\s+(\$?[.\w]+)\s*/
+			const expression = $(element).attr(attr)
+			const matches = expression?.match(pattern)
+			if (!matches) {
+				return undefined
+			}
+			return {
+				reference: matches[2],	// y
+				iterator: matches[1],	// x
+				target: xbindParser._digObj(...xbindParser._resolveReference(aliases, matches[2])),
+			}
+		},
+	}
+}
+
+class xbindArray {
+
+	constructor(onpush) {
+		this.onpush = onpush
+		Object.defineProperty(this, "contents", {
+			value: [],
+		})
+		Object.defineProperty(this, "length", {
+			get: () => this.contents.length,
+		})
+	}
+
+	push(...objs) {
+		for (let obj of objs) {
+			const boundVars = {}
+			const idx = this.contents.length
+			this.contents.push(boundVars)
+			Object.defineProperty(this, idx, {
+				// configurable: true,
+				get: () => this.contents[idx],
+				set: val => this.contents[idx] = val,
+			})
+			this.onpush(boundVars)
+			xbind._assignObj(boundVars, obj)
+		}
+	}
+
+	// TODO
+
+	// pop() {
+	// 	const idx = this.contents.length - 1
+	// 	delete this[idx]
+	// 	return this.contents.pop()
+	// }
+}
+
 class xbind {
-	static _digObj(targetObj, refVar) {
-		const refKeys = refVar.split(".")
-		return [ refKeys.pop(), refKeys.reduce((obj, name) => obj[name] = obj[name] || {}, targetObj), ]
-	}
 
-	static _digValue(targetObj, refVar) {
-		const refKeys = refVar.split(".")
-		return refKeys.reduce((obj, name) => obj.hasOwnProperty(name) ? obj[name] : [], targetObj || {})
-	}
-
-	static _assignObj(dstObj, srcObj) {
-		for (let entry in srcObj) {
-			if (typeof(srcObj[entry]) === "object") {
-				if (typeof(dstObj[entry]) === "object") {
-					xbind._assignObj(dstObj[entry], srcObj[entry])
+	static _assignObj(dst, src) {
+		for (let key in src) {
+			if (typeof(src[key]) === "object") {
+				if (typeof(dst[key]) === "object") {
+					xbind._assignObj(dst[key], src[key])
 				}
 			} else {
-				dstObj[entry] = srcObj[entry]
+				dst[key] = src[key]
 			}
 		}
 	}
@@ -58,115 +147,97 @@ class xbind {
 		},
 	]
 
-	static preprocessors = {
-		"xb-pp-present-if": {
-			parse: (targetObj, element) => {
-				const expression = $(element).attr("xb-pp-present-if")
-				if (!expression) {
-					return [ undefined, true, ]
-				}
-				const inversion = expression.startsWith("not ")
-				const refVar = inversion ? expression.replace("not ", "") : expression
-				return [ refVar, inversion === !xbind._digValue(targetObj, refVar), ]
+	static cloners = {
+		"xb-present-if": {
+			parse: (element, aliases) => xbindParser.syntax["not_x"](element, "xb-present-if", aliases),
+			setter: (obj, key, task) => () => {
+				Object.defineProperty(obj, key, {
+					enumerable: !key.startsWith("_"),
+					// configurable: true,
+					set: task,
+				})
 			},
 		},
-		"xb-pp-repeat-for": {
-			parse: (targetObj, element) => {
-				const expression = $(element).attr("xb-pp-repeat-for")
-				if (!expression) {
-					return [ undefined, [] ]
-				}
-				const [ aliasVar, refVar, ] = expression.split(" in ").map(str => str.trim())
-				return [ refVar, xbind._digValue(targetObj, refVar)?.map((e, i) => {
-					return { [aliasVar]: `${refVar}.${i}`, }
-				}) || [], ]
+
+		"xb-repeat-for": {
+			parse: (element, aliases) => xbindParser.syntax["x_in_y"](element, "xb-repeat-for", aliases),
+			setter: (obj, key, task) => () => {
+				obj[key] = new xbindArray(task)
 			},
 		},
-	}
-
-	static preprocess(paramVars) {
-		function cloneBlock(element, aliasVars, refVars) {
-			const clone = element.content.cloneNode(true)
-
-			// mark as cloned
-			refVars.forEach(refVar => {
-				$(clone).children().attr("xb-pp-cloned", refVar)
-			})
-
-			// replace alias name (the first segment of bind-on varName) into referenced name
-			$("[xb-bind-on]", clone).each((i, element) => {
-				const refVar = $(element).attr("xb-bind-on")
-				const [ refKeyTop, ] = refVar.split(".")
-				if (refKeyTop.startsWith("$") && aliasVars.hasOwnProperty(refKeyTop)) {
-					$(element).attr("xb-bind-on", refVar.replace(refKeyTop, aliasVars[refKeyTop]))
-				}
-			})
-
-			return clone
-		}
-
-		function cloneBlocks(paramVars, aliasVars) {
-			return (i, element) => {
-				// parse directive attr
-				const [ refVarI, condition, ] = xbind.preprocessors["xb-pp-present-if"].parse(paramVars, element)
-				const [ refVarR, aliasVarList, ] = xbind.preprocessors["xb-pp-repeat-for"].parse(paramVars, element)
-
-				if (refVarI && condition && !refVarR) {
-					aliasVarList.push({})
-				}
-
-				// clone template fragments
-				for (let aliasVar of aliasVarList) {
-					const aliasVarsNext = Object.assign({}, aliasVars, aliasVar)
-					const refVars = [ refVarI, refVarR, ].reduce((cur, e) => e ? cur.push(e) && cur : cur, [])
-					const clone = cloneBlock(element, aliasVarsNext, refVars)
-					const allDirectives = Object.keys(xbind.preprocessors).map(str => `[${str}]`).join(",")
-					$(allDirectives, clone).each(cloneBlocks(paramVars, aliasVarsNext))
-					element.parentNode.insertBefore(clone, element)
-				}
-			}
-		}
-
-		const allDirectives = Object.keys(xbind.preprocessors).map(str => `[${str}]`).join(",")
-		$(allDirectives).each(cloneBlocks(paramVars, {}))
 	}
 
 	static bind(boundVars, normalizers) {
-		function bindVars(boundVars, normalizers) {
+
+		function bindVars(aliases, normalizers) {
 			return (i, element) => {
-				const [ lastKey, parentObj, ] = xbind._digObj(boundVars, $(element).attr("xb-bind-on"))
+				// parse directive attr
+				const dataB = xbindParser.syntax["x"](element, "xb-bind-on", aliases)
 				const binder = xbind.binders.find(binder => binder.is(element))
-				const normalizer = normalizers[lastKey] || (val => val)
+				const normalizer = normalizers[dataB.target.key] || (val => val)
 
 				// register getter/setter
-				Object.defineProperty(parentObj, lastKey, {
-					enumerable: !lastKey.startsWith("_"),
-					configurable: true,
+				Object.defineProperty(dataB.target.obj, dataB.target.key, {
+					enumerable: !dataB.target.key.startsWith("_"),
+					// configurable: true,
 					...binder.binder(element, normalizer),
 				})
 
 				// register onchange handler for input element
-				if (normalizers[lastKey]) {
+				if (normalizers[dataB.target.key]) {
 					$(element).change(() => {
-						parentObj[lastKey] = parentObj[lastKey].trim()
+						dataB.target.obj[dataB.target.key] = dataB.target.obj[dataB.target.key].trim()
 					})
 				}
 			}
 		}
 
-		$("[xb-bind-on]").each(bindVars(boundVars, normalizers))
+		function parseBlocks(aliases) {
+			return (i, element) => {
+				// parse directive attr
+				const dataI = xbind.cloners["xb-present-if"].parse(element, aliases)
+				const dataR = xbind.cloners["xb-repeat-for"].parse(element, aliases)
+				const clonerI = () => {
+					const clone = cloneBlock(element.content.cloneNode(true), aliases, {})
+					element.parentNode.insertBefore(clone, element)
+				}
+				const clonerR = boundVars => {
+					const clone = cloneBlock(element.content.cloneNode(true), aliases, { [dataR.iterator]: boundVars, })
+					element.parentNode.insertBefore(clone, element)
+				}
+
+				if (dataI) {
+					const task = dataR ? xbind.cloners["xb-repeat-for"].setter(dataR.target.obj, daraR.target.key, clonerR) : clonerI
+					const taskWrapper = dataI.inversion ? val => !val && task() : val => val && task()
+
+					// register getter/setter
+					const setterWrapper = xbind.cloners["xb-present-if"].setter(dataI.target.obj, dataI.target.key, taskWrapper)
+					setterWrapper()
+				} else {
+					// register onpush handler for adding element
+					const setterWrapper = xbind.cloners["xb-repeat-for"].setter(dataR.target.obj, dataR.target.key, clonerR)
+					setterWrapper()
+				}
+			}
+		}
+
+		function cloneBlock(fragment, aliases, alias) {
+			const directives = Object.keys(xbind.cloners).map(str => `[${str}]`).join(",")
+			const aliasesNext = Object.assign({}, aliases, alias)
+			$("[xb-bind-on]", fragment).each(bindVars(aliasesNext, normalizers))
+			$(directives, fragment).each(parseBlocks(aliasesNext))
+			return fragment
+		}
+
+		cloneBlock(document, {}, { undefined: boundVars, })
 	}
 
 	static build(params) {
 		const xb = window.xbind || {
 			boundVars: {},
-			paramVars: params || {},
-			normalizers: params?._normalizers || {},
+			normalizers: params?.normalizers || {},
 		}
-		Object.assign(xb.paramVars, params)
-		xbind.preprocess(xb.paramVars)
 		xbind.bind(xb.boundVars, xb.normalizers)
-		xbind._assignObj(xb.boundVars, xb.paramVars)
 		window.xbind = xb
 		return xb.boundVars
 	}
