@@ -11,9 +11,9 @@ class xbindParser {
 	}
 
 	static _resolveReference(aliases, reference) {
-		const [ refTop, ] = reference.split(".")
-		if (refTop.startsWith("$") && aliases.hasOwnProperty(refTop)) {
-			return [ aliases[refTop], reference.replace(`${refTop}.`, ""), ]
+		const [ ref0, ] = reference.split(".")
+		if (ref0.startsWith("$") && aliases.hasOwnProperty(ref0)) {
+			return [ aliases[ref0], reference.replace(`${ref0}.`, ""), ]
 		}
 		return [ aliases[undefined], reference, ]
 	}
