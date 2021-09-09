@@ -64,38 +64,159 @@ class xbindParser {
 
 class xbindArray {
 
-	constructor(onpush) {
-		this.onpush = onpush
-		Object.defineProperty(this, "contents", {
+	constructor(oncreate, ondelete) {
+		Object.defineProperty(this, "_oncreate", {
+			value: oncreate,
+		})
+		Object.defineProperty(this, "_ondelete", {
+			value: ondelete,
+		})
+		Object.defineProperty(this, "$contents", {
 			value: [],
 		})
 		Object.defineProperty(this, "length", {
-			get: () => this.contents.length,
+			get: () => this.$contents.length,
+			set: val => {
+				while (this.$contents.length > val) {
+					this.pop()
+				}
+				while (this.$contents.length < val) {
+					this.push({})
+				}
+			},
 		})
+	}
+
+	_createAccessor() {
+		const idx = this.$contents.length
+		Object.defineProperty(this, idx, {
+			enumerable: true,
+			configurable: true,
+			get: () => this.$contents[idx].boundVars,
+			set: val => this.$contents[idx].boundVars = val,
+		})
+	}
+
+	_deleteAccessor() {
+		const idx = this.$contents.length
+		Object.defineProperty(this, idx, {
+			enumerable: true,
+			configurable: true,
+			get: undefined,
+			set: undefined,
+		})
+		delete this[idx]
+	}
+
+	_createContent(obj, idx, len) {
+		this._createAccessor()
+		const content = { boundVars: {}, elements: [], }
+		const addedElements = this._oncreate(content.boundVars, idx, len)
+		content.elements.push(...addedElements)
+		xbind._assignObj(content.boundVars, obj)
+		return content
+	}
+
+	_deleteContent(content) {
+		this._deleteAccessor()
+		this._ondelete(content.elements)
+		return content.boundVars
 	}
 
 	push(...objs) {
 		for (let obj of objs) {
-			const boundVars = {}
-			const idx = this.contents.length
-			this.contents.push(boundVars)
-			Object.defineProperty(this, idx, {
-				// configurable: true,
-				get: () => this.contents[idx],
-				set: val => this.contents[idx] = val,
-			})
-			this.onpush(boundVars)
-			xbind._assignObj(boundVars, obj)
+			const content = this._createContent(obj, this.$contents.length, this.$contents.length)
+			this.$contents.push(content)
 		}
+		return this.$contents.length
 	}
 
-	// TODO
+	unshift(...objs) {
+		for (let obj of objs.reverse()) {
+			const content = this._createContent(obj, 0, this.$contents.length)
+			this.$contents.unshift(content)
+		}
+		return this.$contents.length
+	}
 
-	// pop() {
-	// 	const idx = this.contents.length - 1
-	// 	delete this[idx]
-	// 	return this.contents.pop()
-	// }
+	splice(start, deleteCount, ...objs) {
+		const deletedContents = []
+		for (let i = 0; i < deleteCount; i++) {
+			const [ content, ] = this.$contents.splice(start, 1)
+			deletedContents.push(this._deleteContent(content))
+		}
+		for (let obj of objs.reverse()) {
+			const content = this._createContent(obj, start, this.$contents.length)
+			this.$contents.splice(start, 0, content)
+		}
+		return deletedContents
+	}
+
+	pop() {
+		const content = this.$contents.pop()
+		return this._deleteContent(content)
+	}
+
+	shift() {
+		const content = this.$contents.shift()
+		return this._deleteContent(content)
+	}
+
+	every() {
+		return this.$contents.map(content => content.boundVars).every(...arguments)
+	}
+
+	filter() {
+		return this.$contents.map(content => content.boundVars).filter(...arguments)
+	}
+
+	find() {
+		return this.$contents.map(content => content.boundVars).find(...arguments)
+	}
+
+	findIndex() {
+		return this.$contents.map(content => content.boundVars).findIndex(...arguments)
+	}
+
+	forEach() {
+		return this.$contents.map(content => content.boundVars).forEach(...arguments)
+	}
+
+	includes() {
+		return this.$contents.map(content => content.boundVars).includes(...arguments)
+	}
+
+	keys() {
+		return this.$contents.map(content => content.boundVars).keys(...arguments)
+	}
+
+	map() {
+		return this.$contents.map(content => content.boundVars).map(...arguments)
+	}
+
+	reduce() {
+		return this.$contents.map(content => content.boundVars).reduce(...arguments)
+	}
+
+	reduceRight() {
+		return this.$contents.map(content => content.boundVars).reduceRight(...arguments)
+	}
+
+	reverse() {
+		return this.$contents.map(content => content.boundVars).reverse(...arguments)
+	}
+
+	some() {
+		return this.$contents.map(content => content.boundVars).some(...arguments)
+	}
+
+	sort() {
+		return this.$contents.map(content => content.boundVars).sort(...arguments)
+	}
+
+	values() {
+		return this.$contents.map(content => content.boundVars).values(...arguments)
+	}
 }
 
 class xbind {
@@ -161,8 +282,8 @@ class xbind {
 
 		"xb-repeat-for": {
 			parse: (element, aliases) => xbindParser.syntax["x_in_y"](element, "xb-repeat-for", aliases),
-			setter: (obj, key, task) => () => {
-				obj[key] = new xbindArray(task)
+			setter: (obj, key, oncreate, ondelete) => () => {
+				obj[key] = new xbindArray(oncreate, ondelete)
 			},
 		},
 	}
@@ -197,25 +318,33 @@ class xbind {
 				// parse directive attr
 				const dataI = xbind.cloners["xb-present-if"].parse(element, aliases)
 				const dataR = xbind.cloners["xb-repeat-for"].parse(element, aliases)
-				const clonerI = () => {
+				const onCreateI = () => {
 					const clone = cloneBlock(element.content.cloneNode(true), aliases, {})
+					const addedElements = $(clone).children()
 					element.parentNode.insertBefore(clone, element)
+					return addedElements
 				}
-				const clonerR = boundVars => {
+				const onCreateR = (boundVars, idx, len) => {
 					const clone = cloneBlock(element.content.cloneNode(true), aliases, { [dataR.iterator]: boundVars, })
-					element.parentNode.insertBefore(clone, element)
+					const addedElements = $(clone).children()
+					const insertTo = [...Array(len - idx)].reduce(to => $(to).prev(), element)
+					$(insertTo).before(clone)
+					return addedElements
+				}
+				const onDelete = elements => {
+					$(elements).remove()
 				}
 
 				if (dataI) {
-					const task = dataR ? xbind.cloners["xb-repeat-for"].setter(dataR.target.obj, daraR.target.key, clonerR) : clonerI
+					const task = dataR ? xbind.cloners["xb-repeat-for"].setter(dataR.target.obj, daraR.target.key, onCreateR, onDelete) : onCreateI
 					const taskWrapper = dataI.inversion ? val => !val && task() : val => val && task()
 
 					// register getter/setter
 					const setterWrapper = xbind.cloners["xb-present-if"].setter(dataI.target.obj, dataI.target.key, taskWrapper)
 					setterWrapper()
 				} else {
-					// register onpush handler for adding element
-					const setterWrapper = xbind.cloners["xb-repeat-for"].setter(dataR.target.obj, dataR.target.key, clonerR)
+					// register oncreate handler for adding element
+					const setterWrapper = xbind.cloners["xb-repeat-for"].setter(dataR.target.obj, dataR.target.key, onCreateR, onDelete)
 					setterWrapper()
 				}
 			}
