@@ -109,8 +109,8 @@ class xbindArray {
 		Object.defineProperty(this, idx, {
 			enumerable: true,
 			configurable: true,
-			get: () => this.$contents[idx].boundVars,
-			set: val => this.$contents[idx].boundVars = val,
+			get: () => this.$contents[idx],
+			set: val => this.$contents[idx] = val,
 		})
 	}
 
@@ -125,17 +125,16 @@ class xbindArray {
 
 	_createContent(obj, idx, len) {
 		this._createAccessor()
-		const content = { boundVars: {}, elements: [], }
-		const addedElements = this._oncreate(content.boundVars, idx, len)
-		content.elements.push(...addedElements)
-		xbind._assignObj(content.boundVars, obj)
+		const content = {}
+		this._oncreate(content, { idx, len, })
+		xbind._assignObj(content, obj)
 		return content
 	}
 
-	_deleteContent(content) {
+	_deleteContent(content, idx, len) {
 		this._deleteAccessor()
-		this._ondelete(content.elements)
-		return content.boundVars
+		this._ondelete({ idx, len, })
+		return content
 	}
 
 	push(...objs) {
@@ -158,7 +157,7 @@ class xbindArray {
 		const deletedContents = []
 		for (let i = 0; i < deleteCount; i++) {
 			const [ content, ] = this.$contents.splice(start, 1)
-			deletedContents.push(this._deleteContent(content))
+			deletedContents.push(this._deleteContent(content, start, this.$contents.length))
 		}
 		for (let obj of objs.reverse()) {
 			const content = this._createContent(obj, start, this.$contents.length)
@@ -169,68 +168,68 @@ class xbindArray {
 
 	pop() {
 		const content = this.$contents.pop()
-		return this._deleteContent(content)
+		return this._deleteContent(content, this.$contents.length, this.$contents.length)
 	}
 
 	shift() {
 		const content = this.$contents.shift()
-		return this._deleteContent(content)
+		return this._deleteContent(content, 0, this.$contents.length)
 	}
 
 	every() {
-		return this.$contents.map(content => content.boundVars).every(...arguments)
+		return this.$contents.every(...arguments)
 	}
 
 	filter() {
-		return this.$contents.map(content => content.boundVars).filter(...arguments)
+		return this.$contents.filter(...arguments)
 	}
 
 	find() {
-		return this.$contents.map(content => content.boundVars).find(...arguments)
+		return this.$contents.find(...arguments)
 	}
 
 	findIndex() {
-		return this.$contents.map(content => content.boundVars).findIndex(...arguments)
+		return this.$contents.findIndex(...arguments)
 	}
 
 	forEach() {
-		return this.$contents.map(content => content.boundVars).forEach(...arguments)
+		return this.$contents.forEach(...arguments)
 	}
 
 	includes() {
-		return this.$contents.map(content => content.boundVars).includes(...arguments)
+		return this.$contents.includes(...arguments)
 	}
 
 	keys() {
-		return this.$contents.map(content => content.boundVars).keys(...arguments)
+		return this.$contents.keys(...arguments)
 	}
 
 	map() {
-		return this.$contents.map(content => content.boundVars).map(...arguments)
+		return this.$contents.map(...arguments)
 	}
 
 	reduce() {
-		return this.$contents.map(content => content.boundVars).reduce(...arguments)
+		return this.$contents.reduce(...arguments)
 	}
 
 	reduceRight() {
-		return this.$contents.map(content => content.boundVars).reduceRight(...arguments)
+		return this.$contents.reduceRight(...arguments)
 	}
 
 	reverse() {
-		return this.$contents.map(content => content.boundVars).reverse(...arguments)
+		return this.$contents.reverse(...arguments)
 	}
 
 	some() {
-		return this.$contents.map(content => content.boundVars).some(...arguments)
+		return this.$contents.some(...arguments)
 	}
 
 	sort() {
-		return this.$contents.map(content => content.boundVars).sort(...arguments)
+		return this.$contents.sort(...arguments)
 	}
 
 	values() {
-		return this.$contents.map(content => content.boundVars).values(...arguments)
+		return this.$contents.values(...arguments)
 	}
 }
 
@@ -286,28 +285,42 @@ class xbind {
 	static cloners = {
 		"xb-present-if": {
 			parse: (element, aliases) => xbindParser.syntax["not_x"](element, "xb-present-if", aliases),
-			setter: (obj, key, handler) => () => {
-				Object.defineProperty(obj, `\$${key}`, {
+			bind: (target, handler) => () => {
+				Object.defineProperty(target.obj, `\$${target.key}`, {
 					configurable: true,
 					value: handler,
 				})
-				Object.defineProperty(obj, key, {
-					enumerable: !key.startsWith("_"),
+				Object.defineProperty(target.obj, target.key, {
+					enumerable: !target.key.startsWith("_"),
 					configurable: true,
-					get: () => this[key],
-					set: val => handler.nofity(this[key], val) || (this[key] = val),
+					get: () => this[target.key],
+					set: val => handler.nofity(this[target.key], val) || (this[target.key] = val),
 				})
+			},
+			unbind: target => {
+				Object.defineProperty(target.obj, target.key, {
+					get: undefined,
+					set: undefined,
+				})
+				delete target.obj[target.key]
 			},
 		},
 
 		"xb-repeat-for": {
 			parse: (element, aliases) => xbindParser.syntax["x_in_y"](element, "xb-repeat-for", aliases),
-			setter: (obj, key, handler) => () => {
-				Object.defineProperty(obj, key, {
-					enumerable: !key.startsWith("_"),
+			bind: (target, handler) => () => {
+				Object.defineProperty(target.obj, target.key, {
+					enumerable: !target.key.startsWith("_"),
 					configurable: true,
 					value: handler,
 				})
+			},
+			unbind: target => {
+				Object.defineProperty(target.obj, target.key, {
+					get: undefined,
+					set: undefined,
+				})
+				delete target.obj[target.key]
 			},
 		},
 	}
@@ -352,70 +365,86 @@ class xbind {
 				const dataI = xbind.cloners["xb-present-if"].parse(element, aliases)
 				const dataR = xbind.cloners["xb-repeat-for"].parse(element, aliases)
 
-				function clone_(what) {
-					// what.alias = { [dataR.iterator]: boundVars, }
-					const aliasesNext = what.alias ? Object.assign({}, aliases, what.alias) : aliases
+				function _clone(what) {
+					const aliasesNext = what ? Object.assign({}, aliases, what.alias) : aliases
 					const clone = xbind.bindBlocks(element.content.cloneNode(true), normalizers, aliasesNext)
 					const addedElements = $(clone).children()
-					$(element).data("xb-added-elements", addedElements)
-					return clone
+					return [ clone, addedElements, ]
 				}
 
-				function insert_(where, clone) {
+				function _insert(where, clone, addedElements) {
 					const insertTo = where ? [...Array(where.len - where.idx)].reduce(to => $(to).prev(), element) : element
 					$(insertTo).before(clone)
+					if (where) {
+						const addedElementsList = $(element).data("xb-added-elements") || []
+						addedElementsList.splice(where.idx, 0, addedElements)
+						$(element).data("xb-added-elements", addedElementsList)
+					} else {
+						$(element).data("xb-added-elements", addedElements)
+					}
 				}
 
-				const onCreateR = (boundVars, idx, len) => {
-					const aliasesNext = Object.assign({}, aliases, { [dataR.iterator]: boundVars, })
-					const clone = xbind.bindBlocks(element.content.cloneNode(true), normalizers, aliasesNext)
-					const addedElements = $(clone).children()
-					const insertTo = [...Array(len - idx)].reduce(to => $(to).prev(), element)
-					$(insertTo).before(clone)
-					return addedElements
+				function _remove(where) {
+					if (where) {
+						const addedElementsList = $(element).data("xb-added-elements")
+						const [ elementsTobeRemoved, ] = addedElementsList.splice(where.idx, 1)
+						$(element).data("xb-added-elements", addedElementsList)
+						return elementsTobeRemoved
+					} else {
+						const addedElements = $(element).data("xb-added-elements")
+						$(element).data("xb-added-elements", undefined)
+						return addedElements
+					}
 				}
-				const onDelete = elements => {
-					$(elements).trigger("destroy").remove()
-				}
+
+				$(element).on("xb-construct", (evt, what, where) => {
+					const [ clone, addedElements, ] = _clone(what)
+					_insert(where, clone, addedElements)
+				})
+
+				$(element).on("xb-destruct", (evt, where) => {
+					const elementsToBeRemoved = _remove(where)
+					if (elementsToBeRemoved) {
+						$("template", elementsToBeRemoved).trigger("xb-destroy")
+						$(elementsToBeRemoved).trigger("xb-destroy").remove()
+					}
+				})
+
+				$(element).on("xb-destroy", evt => {
+					const elementsToBeRemoved = $(element).data("xb-added-elements")
+					if (elementsToBeRemoved) {
+						$("template", elementsToBeRemoved).trigger("xb-destroy")
+						$(elementsToBeRemoved).trigger("xb-destroy").remove()
+					}
+				})
 
 				if (dataI) {
 					$(element).on("xb-destroy", evt => {
-						const addedElements = $(element).data("xb-added-elements")
-						$(addedElements).trigger("xb-destroy").remove()
-
-						Object.defineProperty(dataI.target.obj, dataI.target.key, {
-							get: undefined,
-							set: undefined,
-						})
-						delete dataI.target.obj[dataI.target.key]
+						xbind.cloners["xb-present-if"].unbind(dataI.target)
 					})
 
-					$(element).on("xb-construct", (evt, what, where) => {
-						const clone = clone_(what)
-						insert_(where, clone)
-					})
-
-					$(element).on("xb-destruct", evt => {
-						const addedElements = $(element).data("xb-added-elements")
-						$(addedElements).trigger("xb-destroy").remove()
-					})
-
-					const onconstruct = () => $(element).trigger("xb-construct", {}, {})
-					const ondestruct = () => $(element).trigger("xb-destruct")
+					const onconstruct = () => $(element).trigger("xb-construct", [])
+					const ondestruct = () => $(element).trigger("xb-destruct", [])
 					const toggler = new xbindToggler(
 						dataI.inversion ? ondestruct : onconstruct,
 						dataI.inversion ? onconstruct : ondestruct,
 					)
 
-					// // register getter/setter
-					const setterWrapper = xbind.cloners["xb-present-if"].setter(dataI.target.obj, dataI.target.key, toggler)
-					setterWrapper()
+					// register handler for adding/removing element
+					const binder = xbind.cloners["xb-present-if"].bind(dataI.target, toggler)
+					binder()
 				} else {
-					const array = new xbindArray(onCreateR, onDelete)
+					$(element).on("xb-destroy", evt => {
+						xbind.cloners["xb-repeat-for"].unbind(dataR.target)
+					})
 
-					// register oncreate handler for adding element
-					const setterWrapper = xbind.cloners["xb-repeat-for"].setter(dataR.target.obj, dataR.target.key, array)
-					setterWrapper()
+					const onconstruct = (boundVars, where) => $(element).trigger("xb-construct", [ { alias: { [dataR.iterator]: boundVars, }, }, where, ])
+					const ondestruct = where => $(element).trigger("xb-destruct", [ where, ])
+					const array = new xbindArray(onconstruct, ondestruct)
+
+					// register handler for adding/removing element
+					const binder = xbind.cloners["xb-repeat-for"].bind(dataR.target, array)
+					binder()
 				}
 			}
 		}
