@@ -2,9 +2,9 @@
 
 **xbind.js** is a rugged, minimal frontend helper for manipulating contents on your web page.
 
-## No virtual DOM, non reactive, not MVVM..., this is good old style but reasonable
+## No virtual DOM, non reactive..., this is good old style but reasonable
 
-Include a single script, markup your page, then ready for manipulating with your frontend scripts. Think of it like jQuery for the modern web. It’s super simple so you can introduce **xbind.js** within few minutes.
+Include a single script, markup your page, and ready for working with your frontend scripts. The variables returned from **xbind.js** can be used as *view-model*. Think of it like jQuery for the modern web. It’s super simple that you can get started **xbind.js** within few minutes.
 
 ## Binding
 
@@ -43,12 +43,15 @@ This code tells you what **xbind.js** will bring to you. With a `xb-bind-on` key
 			<input type="text" xb-bind-on="addr.address.1" />
 			<div>City</div>
 			<input type="text" xb-bind-on="addr.city" />
-			<div>Country</div>
-			<input type="text" xb-bind-on="addr.country" />
+			<div>State</div>
+			<input type="text" xb-bind-on="addr.state" />
 			<div>Zip</div>
 			<input type="text" xb-bind-on="addr.zipcode" />
-			<hr />
-			<button type="button" id="submit">Print</button>
+			<div>Country</div>
+			<input type="text" xb-bind-on="addr.country" />
+			<div>
+				<button type="button" id="submit">Print</button>
+			</div>
 		</form>
 
 		<script>
