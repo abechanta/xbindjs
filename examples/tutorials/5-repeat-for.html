@@ -1,8 +1,7 @@
 <html>
 	<head>
-		<script src="https://unpkg.com/jquery"></script>
 		<!-- <script src="https://unpkg.com/xbindjs"></script> -->
-		<script src="../../index.js"></script>
+		<script src="../../dist/xbind.js"></script>
 	</head>
 	<body>
 		<h1>Your table</h1>
@@ -20,7 +19,7 @@
 		</table>
 
 		<script>
-			const boundVars = xbind.build()
+			const boundVars = window.xbind.build()
 			boundVars.items.push(
 				{ year: 2016, place: "Rio de Janeiro", },
 			)
