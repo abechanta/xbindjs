@@ -26,5 +26,8 @@
   "homepage": "https://github.com/abechanta/xbindjs#readme",
   "devDependencies": {
     "esbuild": "^0.12.27"
+  },
+  "dependencies": {
+    "dom7": "^4.0.0"
   }
 }

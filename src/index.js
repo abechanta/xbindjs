@@ -1,13 +1,28 @@
 "use strict"
 
+const dom7 = require("dom7")
+const $$ = dom7.$
+$$.fn.attr = dom7.attr
+$$.fn.children = dom7.children
+$$.fn.data = dom7.data
+$$.fn.each = dom7.each
+$$.fn.insertBefore = dom7.insertBefore
+$$.fn.is = dom7.is
+$$.fn.on = dom7.on
+$$.fn.prev = dom7.prev
+$$.fn.prop = dom7.prop
+$$.fn.remove = dom7.remove
+$$.fn.text = dom7.text
+$$.fn.trigger = dom7.trigger
+$$.fn.val = dom7.val
+
 class xbindParser {
 
 	static _digObj(target, reference) {
 		const refs = reference.split(".")
-		return {
-			key: refs.pop(),
-			obj: refs.reduce((obj, key) => obj[key] = obj[key] || {}, target),
-		}
+		const key = refs.pop()
+		const obj = refs.reduce((obj, key) => obj[key] = obj[key] || {}, target)
+		return { key, obj, }
 	}
 
 	static _resolveReference(aliases, reference) {
@@ -21,7 +36,7 @@ class xbindParser {
 	static syntax = {
 		"x": (element, attr, aliases) => {
 			const pattern = /\s*(\$?[.\w]+)\s*/
-			const expression = $(element).attr(attr)
+			const expression = $$(element).attr(attr)
 			const matches = expression?.match(pattern)
 			if (!matches) {
 				return undefined
@@ -34,7 +49,7 @@ class xbindParser {
 
 		"not_x": (element, attr, aliases) => {
 			const pattern = /\s*(not\s+)?(\$?[.\w]+)\s*/
-			const expression = $(element).attr(attr)
+			const expression = $$(element).attr(attr)
 			const matches = expression?.match(pattern)
 			if (!matches) {
 				return undefined
@@ -48,7 +63,7 @@ class xbindParser {
 
 		"x_in_y": (element, attr, aliases) => {
 			const pattern = /\s*(\$\w+)\s+in\s+(\$?[.\w]+)\s*/
-			const expression = $(element).attr(attr)
+			const expression = $$(element).attr(attr)
 			const matches = expression?.match(pattern)
 			if (!matches) {
 				return undefined
@@ -250,34 +265,34 @@ class xbind {
 	static binders = [
 		{
 			name: "checkbox",
-			is: element => $(element).is("input[type=checkbox]"),
+			is: element => $$(element).is("input[type=checkbox]"),
 			binder: element => { return {
-				get: () => $(element).is(":checked"),
-				set: val => $(element).prop("checked", val),
+				get: () => $$(element).is(":checked"),
+				set: val => $$(element).prop("checked", val),
 			}},
 		},
 		{
 			name: "input",
-			is: element => $(element).is("input, textarea"),
+			is: element => $$(element).is("input, textarea"),
 			binder: (element, normalizer) => { return {
-				get: () => normalizer($(element).val()),
-				set: val => $(element).val(val),
+				get: () => normalizer($$(element).val()),
+				set: val => $$(element).val(val),
 			}},
 		},
 		{
 			name: "property",
-			is: element => $(element).is("[xb-affect-to]"),
+			is: element => $$(element).is("[xb-affect-to]"),
 			binder: element => { return {
-				get: () => $(element).prop($(element).attr("xb-affect-to")),
-				set: val => $(element).prop($(element).attr("xb-affect-to"), val),
+				get: () => $$(element).prop($$(element).attr("xb-affect-to")),
+				set: val => $$(element).prop($$(element).attr("xb-affect-to"), val),
 			}},
 		},
 		{
 			name: "innerText",
 			is: () => true,
 			binder: element => { return {
-				get: () => $(element).text(),
-				set: val => $(element).text(val),
+				get: () => $$(element).text(),
+				set: val => $$(element).text(val),
 			}},
 		},
 	]
@@ -328,7 +343,7 @@ class xbind {
 	static bindBlocks(fragment, normalizers, aliases) {
 
 		function bindVars(aliases, normalizers) {
-			return (i, element) => {
+			return (element, i) => {
 				// parse directive attr
 				const dataB = xbindParser.syntax["x"](element, "xb-bind-on", aliases)
 				const binder = xbind.binders.find(binder => binder.is(element))
@@ -342,7 +357,7 @@ class xbind {
 				})
 
 				// register ondestroy handler
-				$(element).on("xb-destroy", evt => {
+				$$(element).on("xb-destroy", evt => {
 					Object.defineProperty(dataB.target.obj, dataB.target.key, {
 						get: undefined,
 						set: undefined,
@@ -352,7 +367,7 @@ class xbind {
 
 				// register onchange handler for input element
 				if (normalizers[dataB.target.key]) {
-					$(element).change(() => {
+					$$(element).change(() => {
 						dataB.target.obj[dataB.target.key] = dataB.target.obj[dataB.target.key].trim()
 					})
 				}
@@ -360,7 +375,7 @@ class xbind {
 		}
 
 		function parseBlocks(aliases) {
-			return (i, element) => {
+			return (element, i) => {
 				// parse directive attr
 				const dataI = xbind.cloners["xb-present-if"].parse(element, aliases)
 				const dataR = xbind.cloners["xb-repeat-for"].parse(element, aliases)
@@ -368,63 +383,69 @@ class xbind {
 				function _clone(what) {
 					const aliasesNext = what ? Object.assign({}, aliases, what.alias) : aliases
 					const clone = xbind.bindBlocks(element.content.cloneNode(true), normalizers, aliasesNext)
-					const addedElements = $(clone).children()
+					const addedElements = $$(clone).children()
 					return [ clone, addedElements, ]
 				}
 
 				function _insert(where, clone, addedElements) {
-					const insertTo = where ? [...Array(where.len - where.idx)].reduce(to => $(to).prev(), element) : element
-					$(insertTo).before(clone)
+					const insertTo = where ? [...Array(where.len - where.idx)].reduce(to => $$(to).prev(), element) : element
+					$$(clone).insertBefore(insertTo)
 					if (where) {
-						const addedElementsList = $(element).data("xb-added-elements") || []
+						const addedElementsList = $$(element).data("xb-added-elements") || []
 						addedElementsList.splice(where.idx, 0, addedElements)
-						$(element).data("xb-added-elements", addedElementsList)
+						$$(element).data("xb-added-elements", addedElementsList)
 					} else {
-						$(element).data("xb-added-elements", addedElements)
+						$$(element).data("xb-added-elements", addedElements)
 					}
 				}
 
 				function _remove(where) {
 					if (where) {
-						const addedElementsList = $(element).data("xb-added-elements")
+						const addedElementsList = $$(element).data("xb-added-elements") || []
 						const [ elementsTobeRemoved, ] = addedElementsList.splice(where.idx, 1)
-						$(element).data("xb-added-elements", addedElementsList)
+						$$(element).data("xb-added-elements", addedElementsList)
 						return elementsTobeRemoved
 					} else {
-						const addedElements = $(element).data("xb-added-elements")
-						$(element).data("xb-added-elements", undefined)
+						const addedElements = $$(element).data("xb-added-elements")
+						$$(element).data("xb-added-elements", undefined)
 						return addedElements
 					}
 				}
 
-				$(element).on("xb-construct", (evt, what, where) => {
+				$$(element).on("xb-construct", (evt, [ what, where, ]) => {
 					const [ clone, addedElements, ] = _clone(what)
 					_insert(where, clone, addedElements)
 				})
 
-				$(element).on("xb-destruct", (evt, where) => {
+				$$(element).on("xb-destruct", (evt, [ where, ]) => {
 					const elementsToBeRemoved = _remove(where)
 					if (elementsToBeRemoved) {
-						$("template", elementsToBeRemoved).trigger("xb-destroy")
-						$(elementsToBeRemoved).trigger("xb-destroy").remove()
+						elementsToBeRemoved.each(element => {
+							$$("template", element).trigger("xb-destroy")
+						})
+						$$(elementsToBeRemoved).trigger("xb-destroy")
+						$$(elementsToBeRemoved).remove()
 					}
 				})
 
-				$(element).on("xb-destroy", evt => {
-					const elementsToBeRemoved = $(element).data("xb-added-elements")
+				$$(element).on("xb-destroy", evt => {
+					const elementsToBeRemoved = $$(element).data("xb-added-elements")
 					if (elementsToBeRemoved) {
-						$("template", elementsToBeRemoved).trigger("xb-destroy")
-						$(elementsToBeRemoved).trigger("xb-destroy").remove()
+						elementsToBeRemoved.each(element => {
+							$$("template", element).trigger("xb-destroy")
+						})
+						$$(elementsToBeRemoved).trigger("xb-destroy")
+						$$(elementsToBeRemoved).remove()
 					}
 				})
 
 				if (dataI) {
-					$(element).on("xb-destroy", evt => {
+					$$(element).on("xb-destroy", evt => {
 						xbind.cloners["xb-present-if"].unbind(dataI.target)
 					})
 
-					const onconstruct = () => $(element).trigger("xb-construct", [])
-					const ondestruct = () => $(element).trigger("xb-destruct", [])
+					const onconstruct = () => $$(element).trigger("xb-construct", [])
+					const ondestruct = () => $$(element).trigger("xb-destruct", [])
 					const toggler = new xbindToggler(
 						dataI.inversion ? ondestruct : onconstruct,
 						dataI.inversion ? onconstruct : ondestruct,
@@ -434,12 +455,12 @@ class xbind {
 					const binder = xbind.cloners["xb-present-if"].bind(dataI.target, toggler)
 					binder()
 				} else {
-					$(element).on("xb-destroy", evt => {
+					$$(element).on("xb-destroy", evt => {
 						xbind.cloners["xb-repeat-for"].unbind(dataR.target)
 					})
 
-					const onconstruct = (boundVars, where) => $(element).trigger("xb-construct", [ { alias: { [dataR.iterator]: boundVars, }, }, where, ])
-					const ondestruct = where => $(element).trigger("xb-destruct", [ where, ])
+					const onconstruct = (boundVars, where) => $$(element).trigger("xb-construct", [ { alias: { [dataR.iterator]: boundVars, }, }, where, ])
+					const ondestruct = where => $$(element).trigger("xb-destruct", [ where, ])
 					const array = new xbindArray(onconstruct, ondestruct)
 
 					// register handler for adding/removing element
@@ -450,8 +471,8 @@ class xbind {
 		}
 
 		const directives = Object.keys(xbind.cloners).map(str => `[${str}]`).join(",")
-		$("[xb-bind-on]", fragment).each(bindVars(aliases, normalizers))
-		$(directives, fragment).each(parseBlocks(aliases))
+		$$("[xb-bind-on]", fragment).each(bindVars(aliases, normalizers))
+		$$(directives, fragment).each(parseBlocks(aliases))
 		return fragment
 	}
 
@@ -460,12 +481,14 @@ class xbind {
 	}
 
 	static build(params) {
-		const xb = window.xbind || {
+		const xb = globalThis.xbindConfig || {
 			boundVars: {},
 			normalizers: params?.normalizers || {},
 		}
 		xbind.bind(xb.boundVars, xb.normalizers)
-		window.xbind = xb
+		globalThis.xbindConfig = xb
 		return xb.boundVars
 	}
 }
+
+globalThis.xbind = xbind
