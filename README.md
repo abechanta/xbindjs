@@ -2,9 +2,9 @@
 
 **xbind.js** is a rugged, minimal frontend helper for manipulating contents on your web page.
 
-## No virtual DOM, non reactive, not MVVM..., this is good old style but reasonable
+## No virtual DOM, non reactive..., this is good old style but reasonable
 
-Include a single script, markup your page, then ready for manipulating with your frontend scripts. Think of it like jQuery for the modern web. It’s super simple so you can introduce **xbind.js** within few minutes.
+Include a single script, markup your page, and ready for working with your frontend scripts. The variables returned from **xbind.js** can be used as *view-model*. Think of it like jQuery for the modern web. It’s super simple that you can get started **xbind.js** within few minutes.
 
 ## Binding
 
@@ -18,7 +18,7 @@ Include a single script, markup your page, then ready for manipulating with your
 		<div xb-bind-on="head.message2"></div>
 
 		<script>
-			const boundVars = xbind.build()
+			const boundVars = window.xbind.build()
 			boundVars.head.message1 = "Hello, xbind.js!"
 			boundVars.head.message2 = "You can easily modify elements on your page."
 		</script>
@@ -43,16 +43,19 @@ This code tells you what **xbind.js** will bring to you. With a `xb-bind-on` key
 			<input type="text" xb-bind-on="addr.address.1" />
 			<div>City</div>
 			<input type="text" xb-bind-on="addr.city" />
-			<div>Country</div>
-			<input type="text" xb-bind-on="addr.country" />
+			<div>State</div>
+			<input type="text" xb-bind-on="addr.state" />
 			<div>Zip</div>
 			<input type="text" xb-bind-on="addr.zipcode" />
-			<hr />
-			<button type="button" id="submit">Print</button>
+			<div>Country</div>
+			<input type="text" xb-bind-on="addr.country" />
+			<div>
+				<button type="button" id="submit">Print</button>
+			</div>
 		</form>
 
 		<script>
-			const boundVars = xbind.build()
+			const boundVars = window.xbind.build()
 			$("#submit").click(() => console.log(boundVars))
 		</script>
 	</body>
@@ -75,7 +78,7 @@ You can also get values or texts from your input elements as well. These bound v
 		</ul>
 
 		<script>
-			const boundVars = xbind.build()
+			const boundVars = window.xbind.build()
 			boundVars.link.url[0] = "https://example.com/first"
 			boundVars.link.url[1] = "https://example.com/second"
 			boundVars.link.url[2] = "https://example.com/third"
@@ -103,7 +106,7 @@ With a `xb-affect-to` keyword, you can modify properties of elements as well.
 		</template>
 
 		<script>
-			const boundVars = xbind.build()
+			const boundVars = window.xbind.build()
 			boundVars.firstTime = true
 		</script>
 	</body>
@@ -133,7 +136,7 @@ With a `xb-present-if` keyword along with `template` tag, you can add a block of
 		</table>
 
 		<script>
-			const boundVars = xbind.build()
+			const boundVars = window.xbind.build()
 			boundVars.items.push(
 				{ year: 2016, place: "Rio de Janeiro", },
 			)

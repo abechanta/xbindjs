@@ -1,8 +1,7 @@
 <html>
 	<head>
-		<script src="https://unpkg.com/jquery"></script>
 		<!-- <script src="https://unpkg.com/xbindjs"></script> -->
-		<script src="../../index.js"></script>
+		<script src="../../dist/xbind.js"></script>
 	</head>
 	<body>
 		<h1>Your links</h1>
@@ -13,7 +12,7 @@
 		</ul>
 
 		<script>
-			const boundVars = xbind.build()
+			const boundVars = window.xbind.build()
 			boundVars.link.url[0] = "https://example.com/first"
 			boundVars.link.url[1] = "https://example.com/second"
 			boundVars.link.url[2] = "https://example.com/third"

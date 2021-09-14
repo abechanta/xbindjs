@@ -2,9 +2,11 @@
   "name": "xbindjs",
   "version": "0.1.0",
   "description": "xbind.js is a rugged, minimal frontend helper for manipulating contents on your web page.",
-  "main": "index.js",
+  "main": "dist/xbind.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "esbuild src/index.js --outfile=dist/xbind.js --bundle --sourcemap",
+    "release:build": "esbuild src/index.js --outfile=dist/xbind.min.js --bundle --sourcemap --minify"
   },
   "repository": {
     "type": "git",
@@ -12,12 +14,20 @@
   },
   "keywords": [
     "frontend",
-    "binding"
+    "library",
+    "binding",
+    "javascript"
   ],
   "author": "abechanta",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/abechanta/xbindjs/issues"
   },
-  "homepage": "https://github.com/abechanta/xbindjs#readme"
+  "homepage": "https://github.com/abechanta/xbindjs#readme",
+  "devDependencies": {
+    "esbuild": "^0.12.27"
+  },
+  "dependencies": {
+    "dom7": "^4.0.0"
+  }
 }
