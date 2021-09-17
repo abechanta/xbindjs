@@ -32,7 +32,7 @@ class xbind {
 		},
 		{
 			name: "input",
-			is: element => $$(element).is("input, textarea"),
+			is: element => $$(element).is("input, select, textarea"),
 			binder: (element, normalizer) => { return {
 				get: () => normalizer($$(element).val()),
 				set: val => $$(element).val(val),
