@@ -25,7 +25,7 @@
 		</form>
 
 		<script>
-			const boundVars = window.xbind.build()
+			const boundVars = xbind.build()
 			$("#submit").click(() => console.log(boundVars))
 
 			xbindConfig.normalizers["capitalize"] = val => val.toUpperCase()
