@@ -42,8 +42,8 @@ class xbind {
 			name: "property",
 			is: element => $$(element).is("[xb-affect-to]"),
 			binder: element => { return {
-				get: () => $$(element).prop($$(element).attr("xb-affect-to")),
-				set: val => $$(element).prop($$(element).attr("xb-affect-to"), val),
+				get: () => $$(element).attr($$(element).attr("xb-affect-to")),
+				set: val => $$(element).attr($$(element).attr("xb-affect-to"), val),
 			}},
 		},
 		{
@@ -101,18 +101,18 @@ class xbind {
 
 	static bindBlocks(fragment, normalizers, aliases) {
 
-		function bindVars(aliases, normalizers) {
+		function bindVars(aliases) {
 			return (element, i) => {
 				// parse directive attr
 				const dataB = xbindParser.syntax["x"](element, "xb-bind-on", aliases)
 				const binder = xbind.binders.find(binder => binder.is(element))
-				const normalizer = normalizers[dataB.target.key] || (val => val)
+				const normalizer = normalizers[$(element).attr("xb-normalized-by") || dataB.target.key]
 
 				// register getter/setter
 				Object.defineProperty(dataB.target.obj, dataB.target.key, {
 					enumerable: !dataB.target.key.startsWith("_"),
 					configurable: true,
-					...binder.binder(element, normalizer),
+					...binder.binder(element, normalizer || (val => val)),
 				})
 
 				// register ondestroy handler
@@ -125,11 +125,12 @@ class xbind {
 				})
 
 				// register onchange handler for input element
-				if (normalizers[dataB.target.key]) {
-					$$(element).change(() => {
-						dataB.target.obj[dataB.target.key] = dataB.target.obj[dataB.target.key].trim()
-					})
-				}
+				$$(element).on("change", () => {
+					const normalizer = normalizers[$(element).attr("xb-normalized-by") || dataB.target.key]
+					if (normalizer) {
+						dataB.target.obj[dataB.target.key] = normalizer(dataB.target.obj[dataB.target.key])
+					}
+				})
 			}
 		}
 
@@ -230,7 +231,7 @@ class xbind {
 		}
 
 		const directives = Object.keys(xbind.cloners).map(str => `[${str}]`).join(",")
-		$$("[xb-bind-on]", fragment).each(bindVars(aliases, normalizers))
+		$$("[xb-bind-on]", fragment).each(bindVars(aliases))
 		$$(directives, fragment).each(parseBlocks(aliases))
 		return fragment
 	}

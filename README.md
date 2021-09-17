@@ -18,7 +18,7 @@ Include a single script, markup your page, and ready for working with your front
 		<div xb-bind-on="head.message2"></div>
 
 		<script>
-			const boundVars = window.xbind.build()
+			const boundVars = xbind.build()
 			boundVars.head.message1 = "Hello, xbind.js!"
 			boundVars.head.message2 = "You can easily modify elements on your page."
 		</script>
@@ -55,7 +55,7 @@ This code tells you what **xbind.js** will bring to you. With a `xb-bind-on` key
 		</form>
 
 		<script>
-			const boundVars = window.xbind.build()
+			const boundVars = xbind.build()
 			$("#submit").click(() => console.log(boundVars))
 		</script>
 	</body>
@@ -78,7 +78,7 @@ You can also get values or texts from your input elements as well. These bound v
 		</ul>
 
 		<script>
-			const boundVars = window.xbind.build()
+			const boundVars = xbind.build()
 			boundVars.link.url[0] = "https://example.com/first"
 			boundVars.link.url[1] = "https://example.com/second"
 			boundVars.link.url[2] = "https://example.com/third"
@@ -106,7 +106,7 @@ With a `xb-affect-to` keyword, you can modify properties of elements as well.
 		</template>
 
 		<script>
-			const boundVars = window.xbind.build()
+			const boundVars = xbind.build()
 			boundVars.firstTime = true
 		</script>
 	</body>
@@ -136,7 +136,7 @@ With a `xb-present-if` keyword along with `template` tag, you can add a block of
 		</table>
 
 		<script>
-			const boundVars = window.xbind.build()
+			const boundVars = xbind.build()
 			boundVars.items.push(
 				{ year: 2016, place: "Rio de Janeiro", },
 			)
