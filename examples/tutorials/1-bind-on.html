@@ -1,6 +1,5 @@
 <html>
 	<head>
-		<!-- <script src="https://unpkg.com/jquery"></script> -->
 		<!-- <script src="https://unpkg.com/xbindjs"></script> -->
 		<script src="../../dist/xbind.js"></script>
 	</head>
@@ -9,7 +8,7 @@
 		<div xb-bind-on="head.message2"></div>
 
 		<script>
-			const boundVars = window.xbind.build()
+			const boundVars = xbind.build()
 			boundVars.head.message1 = "Hello, xbind.js!"
 			boundVars.head.message2 = "You can easily modify elements on your page."
 		</script>

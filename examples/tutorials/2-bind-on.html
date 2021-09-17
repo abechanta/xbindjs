@@ -18,15 +18,17 @@
 			<div>Zip</div>
 			<input type="text" xb-bind-on="addr.zipcode" />
 			<div>Country</div>
-			<input type="text" xb-bind-on="addr.country" />
+			<input type="text" xb-bind-on="addr.country" xb-normalized-by="capitalize" />
 			<div>
 				<button type="button" id="submit">Print</button>
 			</div>
 		</form>
 
 		<script>
-			const boundVars = window.xbind.build()
+			const boundVars = xbind.build()
 			$("#submit").click(() => console.log(boundVars))
+
+			xbindConfig.normalizers["capitalize"] = val => val.toUpperCase()
 		</script>
 	</body>
 </html>
