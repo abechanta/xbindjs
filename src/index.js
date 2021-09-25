@@ -106,7 +106,7 @@ class xbind {
 				// parse directive attr
 				const dataB = xbindParser.syntax["x"](element, "xb-bind-on", aliases)
 				const binder = xbind.binders.find(binder => binder.is(element))
-				const normalizer = normalizers[$(element).attr("xb-normalized-by") || dataB.target.key]
+				const normalizer = normalizers[$$(element).attr("xb-normalized-by") || dataB.target.key]
 
 				// register getter/setter
 				Object.defineProperty(dataB.target.obj, dataB.target.key, {
@@ -126,7 +126,7 @@ class xbind {
 
 				// register onchange handler for input element
 				$$(element).on("change", () => {
-					const normalizer = normalizers[$(element).attr("xb-normalized-by") || dataB.target.key]
+					const normalizer = normalizers[$$(element).attr("xb-normalized-by") || dataB.target.key]
 					if (normalizer) {
 						dataB.target.obj[dataB.target.key] = normalizer(dataB.target.obj[dataB.target.key])
 					}
