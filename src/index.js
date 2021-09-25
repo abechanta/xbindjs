@@ -35,7 +35,7 @@ class xbind {
 			is: element => $$(element).is("input, select, textarea"),
 			binder: (element, normalizer) => { return {
 				get: () => normalizer($$(element).val()),
-				set: val => $$(element).val(val),
+				set: val => $$(element).val(normalizer(val)),
 			}},
 		},
 		{
@@ -99,20 +99,24 @@ class xbind {
 		},
 	}
 
-	static bindBlocks(fragment, normalizers, aliases) {
+	static bindBlocks(fragment, aliases) {
 
 		function bindVars(aliases) {
 			return (element, i) => {
 				// parse directive attr
 				const dataB = xbindParser.syntax["x"](element, "xb-bind-on", aliases)
 				const binder = xbind.binders.find(binder => binder.is(element))
-				const normalizer = normalizers[$(element).attr("xb-normalized-by") || dataB.target.key]
+				const normalizerName = $$(element).attr("xb-normalized-by") || dataB.target.key
+				const normalizer = val => {
+					const normalizers = globalThis.xbindConfig.normalizers
+					return normalizers[normalizerName] ? normalizers[normalizerName](val) : val
+				}
 
 				// register getter/setter
 				Object.defineProperty(dataB.target.obj, dataB.target.key, {
 					enumerable: !dataB.target.key.startsWith("_"),
 					configurable: true,
-					...binder.binder(element, normalizer || (val => val)),
+					...binder.binder(element, normalizer),
 				})
 
 				// register ondestroy handler
@@ -126,10 +130,7 @@ class xbind {
 
 				// register onchange handler for input element
 				$$(element).on("change", () => {
-					const normalizer = normalizers[$(element).attr("xb-normalized-by") || dataB.target.key]
-					if (normalizer) {
-						dataB.target.obj[dataB.target.key] = normalizer(dataB.target.obj[dataB.target.key])
-					}
+					dataB.target.obj[dataB.target.key] = normalizer(dataB.target.obj[dataB.target.key])
 				})
 			}
 		}
@@ -142,7 +143,7 @@ class xbind {
 
 				function _clone(what) {
 					const aliasesNext = what ? Object.assign({}, aliases, what.alias) : aliases
-					const clone = xbind.bindBlocks(element.content.cloneNode(true), normalizers, aliasesNext)
+					const clone = xbind.bindBlocks(element.content.cloneNode(true), aliasesNext)
 					const addedElements = $$(clone).children()
 					return [ clone, addedElements, ]
 				}
@@ -236,8 +237,8 @@ class xbind {
 		return fragment
 	}
 
-	static bind(boundVars, normalizers) {
-		xbind.bindBlocks(document, normalizers, { undefined: boundVars, })
+	static bind(boundVars) {
+		xbind.bindBlocks(document, { undefined: boundVars, })
 	}
 
 	static build(params) {
@@ -245,8 +246,8 @@ class xbind {
 			boundVars: {},
 			normalizers: params?.normalizers || {},
 		}
-		xbind.bind(xb.boundVars, xb.normalizers)
 		globalThis.xbindConfig = xb
+		xbind.bind(xb.boundVars)
 		return xb.boundVars
 	}
 }
