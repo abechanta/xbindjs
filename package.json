@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "run-p build:*",
     "build:dbg": "esbuild src/index.js --outfile=dist/xbind.js --bundle --sourcemap",
-    "build:rel": "esbuild src/index.js --outfile=dist/xbind.min.js --bundle --sourcemap --minify"
+    "build:rel": "esbuild src/index.js --outfile=dist/xbind.min.js --bundle --sourcemap --minify",
+    "prepublish": "run-s build"
   },
   "repository": {
     "type": "git",
