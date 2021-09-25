@@ -1,6 +1,6 @@
 {
   "name": "xbindjs",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "xbind.js is a rugged, minimal frontend helper for manipulating contents on your web page.",
   "main": "dist/xbind.js",
   "scripts": {
