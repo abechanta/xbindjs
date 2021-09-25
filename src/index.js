@@ -141,9 +141,20 @@ class xbind {
 				const dataI = xbind.cloners["xb-present-if"].parse(element, aliases)
 				const dataR = xbind.cloners["xb-repeat-for"].parse(element, aliases)
 
+				function _rename(element, attrName, what) {
+					const id = $$(element).attr(attrName)
+					const [ boundVars, ] = Object.values(what.alias)
+					$$(element).attr(attrName, `${id}-${boundVars.$suffix}`)
+				}
+
 				function _clone(what) {
 					const aliasesNext = what ? Object.assign({}, aliases, what.alias) : aliases
 					const clone = xbind.bindBlocks(element.content.cloneNode(true), aliasesNext)
+					what && $$("[id]", clone).each((element, i) => _rename(element, "id", what))
+					what && $$("[xb-add-suffix-to]", clone).each((element, i) => {
+						const attrNames = $$(element).attr("xb-add-suffix-to").split(",")
+						attrNames.forEach(attrName => _rename(element, attrName.trim(), what))
+					})
 					const addedElements = $$(clone).children()
 					return [ clone, addedElements, ]
 				}

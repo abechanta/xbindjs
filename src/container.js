@@ -46,9 +46,17 @@ class xbindContainer {
 		delete this[idx]
 	}
 
+	_createSuffix() {
+		xbindContainer.$suffix = xbindContainer.$suffix || 0
+		return ++xbindContainer.$suffix
+	}
+
 	_createContent(obj, idx, len) {
 		this._createAccessor()
 		const content = {}
+		Object.defineProperty(content, "$suffix", {
+			value: this._createSuffix(),
+		})
 		this._oncreate(content, { idx, len, })
 		xbindUtils.assignObj(content, obj)
 		return content
