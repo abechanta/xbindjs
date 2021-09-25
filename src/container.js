@@ -2,7 +2,7 @@
 
 const xbindUtils = require("./utils")
 
-class xbindContainer {
+export class xbindContainer {
 
 	constructor(oncreate, ondelete) {
 		Object.defineProperty(this, "_oncreate", {
@@ -69,18 +69,18 @@ class xbindContainer {
 	}
 
 	push(...objs) {
-		for (let obj of objs) {
+		objs.forEach(obj => {
 			const content = this._createContent(obj, this.$contents.length, this.$contents.length)
 			this.$contents.push(content)
-		}
+		})
 		return this.$contents.length
 	}
 
 	unshift(...objs) {
-		for (let obj of objs.reverse()) {
+		objs.reverse().forEach(obj => {
 			const content = this._createContent(obj, 0, this.$contents.length)
 			this.$contents.unshift(content)
-		}
+		})
 		return this.$contents.length
 	}
 
@@ -90,10 +90,10 @@ class xbindContainer {
 			const [ content, ] = this.$contents.splice(start, 1)
 			deletedContents.push(this._deleteContent(content, start, this.$contents.length))
 		}
-		for (let obj of objs.reverse()) {
+		objs.reverse().forEach(obj => {
 			const content = this._createContent(obj, start, this.$contents.length)
 			this.$contents.splice(start, 0, content)
-		}
+		})
 		return deletedContents
 	}
 
@@ -163,5 +163,3 @@ class xbindContainer {
 		return this.$contents.values(...arguments)
 	}
 }
-
-module.exports = xbindContainer

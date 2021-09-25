@@ -1,8 +1,8 @@
 "use strict"
 
-const xbindParser = require("./parser")
-const xbindToggler = require("./toggler")
-const xbindContainer = require("./container")
+const { xbindParser, } = require("./parser")
+const { xbindToggler, } = require("./toggler")
+const { xbindContainer, } = require("./container")
 const dom7 = require("dom7")
 const $$ = dom7.$
 $$.fn.attr = dom7.attr
@@ -25,34 +25,34 @@ class xbind {
 		{
 			name: "checkbox",
 			is: element => $$(element).is("input[type=checkbox]"),
-			binder: element => { return {
+			binder: element => ({
 				get: () => $$(element).is(":checked"),
 				set: val => $$(element).prop("checked", val),
-			}},
+			}),
 		},
 		{
 			name: "input",
 			is: element => $$(element).is("input, select, textarea"),
-			binder: (element, normalizer) => { return {
+			binder: (element, normalizer) => ({
 				get: () => normalizer($$(element).val()),
 				set: val => $$(element).val(normalizer(val)),
-			}},
+			}),
 		},
 		{
 			name: "property",
 			is: element => $$(element).is("[xb-affect-to]"),
-			binder: element => { return {
+			binder: element => ({
 				get: () => $$(element).attr($$(element).attr("xb-affect-to")),
 				set: val => $$(element).attr($$(element).attr("xb-affect-to"), val),
-			}},
+			}),
 		},
 		{
 			name: "innerText",
 			is: () => true,
-			binder: element => { return {
+			binder: element => ({
 				get: () => $$(element).text(),
 				set: val => $$(element).text(val),
-			}},
+			}),
 		},
 	]
 
@@ -137,10 +137,6 @@ class xbind {
 
 		function parseBlocks(aliases) {
 			return (element, i) => {
-				// parse directive attr
-				const dataI = xbind.cloners["xb-present-if"].parse(element, aliases)
-				const dataR = xbind.cloners["xb-repeat-for"].parse(element, aliases)
-
 				function _rename(element, attrName, what) {
 					const id = $$(element).attr(attrName)
 					const [ boundVars, ] = Object.values(what.alias)
@@ -211,6 +207,10 @@ class xbind {
 					}
 				})
 
+				// parse directive attr
+				const dataI = xbind.cloners["xb-present-if"].parse(element, aliases)
+				const dataR = xbind.cloners["xb-repeat-for"].parse(element, aliases)
+
 				if (dataI) {
 					$$(element).on("xb-destroy", evt => {
 						xbind.cloners["xb-present-if"].unbind(dataI.target)
@@ -226,7 +226,7 @@ class xbind {
 					// register handler for adding/removing element
 					const binder = xbind.cloners["xb-present-if"].bind(dataI.target, toggler)
 					binder()
-				} else {
+				} else if (dataR) {
 					$$(element).on("xb-destroy", evt => {
 						xbind.cloners["xb-repeat-for"].unbind(dataR.target)
 					})

@@ -4,7 +4,7 @@ const dom7 = require("dom7")
 const $$ = dom7.$
 $$.fn.attr = dom7.attr
 
-class xbindParser {
+export class xbindParser {
 
 	static _digObj(target, reference) {
 		const refs = reference.split(".")
@@ -64,5 +64,3 @@ class xbindParser {
 		},
 	}
 }
-
-module.exports = xbindParser

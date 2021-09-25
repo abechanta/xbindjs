@@ -1,7 +1,7 @@
 "use strict"
 
-function assignObj(dst, src) {
-	for (let key in src) {
+export function assignObj(dst, src) {
+	for (const key in src) {
 		if (typeof(src[key]) === "object") {
 			if (typeof(dst[key]) === "object") {
 				assignObj(dst[key], src[key])
@@ -10,8 +10,4 @@ function assignObj(dst, src) {
 			dst[key] = src[key]
 		}
 	}
-}
-
-module.exports = {
-	assignObj,
 }

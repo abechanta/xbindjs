@@ -1,6 +1,6 @@
 "use strict"
 
-class xbindToggler {
+export class xbindToggler {
 
 	constructor(onset, onreset) {
 		Object.defineProperty(this, "_onset", {
@@ -16,5 +16,3 @@ class xbindToggler {
 		valOld && !valNew && this._onreset()
 	}
 }
-
-module.exports = xbindToggler
